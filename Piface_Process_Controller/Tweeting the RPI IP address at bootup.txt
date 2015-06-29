@@ -1,0 +1,110 @@
+
+pi@raspberrypi ~/tweepy $ cat Tweeter.py
+#!/usr/bin/env python
+
+# Open Source Code -- Customized by Francis M. Columbus as a component of an industrial process controller package.
+# The credentials below post to @fcolumbu on Twitter.
+# October 12, 2013 - Vers 1.0
+
+import sys
+import tweepy
+
+CONSUMER_KEY = 'CV3Jp1C3wWRCyTzKxJIgQ'		# Sample values
+CONSUMER_SECRET = '5aTW0RUzzI8EgoH02J3dfdgPg'
+ACCESS_KEY = '1910363797-ZBIqBkFqW3WgQKuLCe'
+ACCESS_SECRET = 'oKxCGuAkKDyBXuraLGU3GwlmY'
+
+
+auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
+auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+api = tweepy.API(auth)
+api.update_status(sys.argv[1])
+pi@raspberrypi ~/tweepy $ 
+
+
+pi@raspberrypi ~/tweepy $ cat getIP_eth0.py
+# getIP_eth0.py
+
+# Open Source Code -- Customized by Francis M. Columbus as a component of an industrial process controller package.
+# October 12, 2013 - Vers 1.0
+
+import socket
+import fcntl
+import struct
+
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
+
+# print get_ip_address('lo')
+print get_ip_address('eth0')
+
+
+pi@raspberrypi ~/tweepy $ cat TweetIP
+#!/bin/bash
+
+# Get the ip for eth0 and post it to Twitter
+# getIP-eth0.py returns the IP address of eth0
+# Tweeter.py is responsible for posting to @fcolumbu on Twitter via the OAuth embedded credentials.
+# To execute this script at system boot up add the following to the end of /etc/rc.local:
+
+
+# Tweet our IP address for eth0 <-- comment in /etc/rc.local
+#  cd /home/pi/tweepy  <-- Uncomment in /etc/rc.local
+#  ./TweetIP           <-- Uncomment in /etc/rc.local
+
+
+
+python Tweeter.py "`python getIP_eth0.py`" 
+
+pi@raspberrypi ~/tweepy $ ls -al
+total 24
+drwxr-xr-x  2 pi   pi   4096 Oct 12 00:55 .
+drwxr-xr-x 29 pi   pi   4096 Oct 12 02:21 ..
+-rw-r--r--  1 pi   pi    499 Oct 12 02:39 getIP_eth0.py
+-rwxr-xr-x  1 root root  643 Oct 12 02:38 Tweeter.py
+-rw-r--r--  1 pi   pi    613 Oct 12 00:23 Tweeter.pyc
+-rwxr-xr-x  1 pi   pi    513 Oct 12 02:29 TweetIP
+
+pi@raspberrypi ~/tweepy $ cat /etc/rc.local
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+# Print the IP address
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  printf "My IP address is %s\n" "$_IP"
+fi
+
+# This is a simple diagnostic to prove that "rc.local" was executed. 
+# Delete the empty file: /home/pi/rclocal-working. If it is present 
+# after the next boot up, rc.local ran. 
+touch /home/pi/rclocal-working
+
+# This timing loop compensates for the fact that the Raspberry Pi 
+# runs at "runlvl 2" by default even with networking. We allow time 
+# for all of the networking processes to be up and stable before 
+# trying to look for and tweet an IP address.
+sleep 45
+
+# Tweet our IP address for eth0
+cd /home/pi/tweepy
+./TweetIP
+
+
+exit 0
+pi@raspberrypi ~/tweepy $ 
